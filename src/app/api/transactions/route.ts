@@ -1,19 +1,29 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const supabase = await createClient();
+    const { searchParams } = new URL(request.url);
+    const month = searchParams.get('month');
+    const year = searchParams.get('year');
     
-    // Join en Supabase: transactions(*, products(...))
-    const { data: transactions, error } = await supabase
+    // Build query
+    let query = supabase
       .from('transactions')
       .select(`
         *,
         products (
           marca, codigo, descripcion
         )
-      `)
+      `);
+      
+    if (month && year) {
+      // Filtrar por prefijo de fecha YYYY-MM
+      query = query.like('date', `${year}-${month}-%`);
+    }
+
+    const { data: transactions, error } = await query
       .order('date', { ascending: false })
       .order('id', { ascending: false });
 

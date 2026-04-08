@@ -21,11 +21,20 @@ export default function App() {
   // Modificadores
   const [selectedProductStat, setSelectedProductStat] = useState<any>(null);
   const [editSelectedStatus, setEditSelectedStatus] = useState<any>(null);
+  
+  // Autocompletado Búsqueda
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
 
   // Fechas (Se mantendrán iguales para tu backend real)
   const now = new Date();
   const [month, setMonth] = useState(String(now.getMonth() + 1).padStart(2, '0'));
   const [year, setYear] = useState(String(now.getFullYear()));
+  
+  // Fechas Independientes para Auditoría
+  const [auditoriaMonth, setAuditoriaMonth] = useState(String(now.getMonth() + 1).padStart(2, '0'));
+  const [auditoriaYear, setAuditoriaYear] = useState(String(now.getFullYear()));
+  
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -36,32 +45,41 @@ export default function App() {
 
   useEffect(() => {
     fetchProducts();
-    fetchRecentTransactions();
+    if (activeTab === 'movimientos') fetchRecentTransactions();
     if (activeTab === 'dashboard') fetchSummary();
-  }, [activeTab, month, year]);
+  }, [activeTab, month, year, auditoriaMonth, auditoriaYear]);
 
   const fetchProducts = async () => {
     try {
       const res = await fetch('/api/products');
-      const data = await res.json();
-      if (Array.isArray(data)) setProducts(data);
+      let data = await res.json();
+      if (Array.isArray(data)) {
+        // ORDEN ALFABÉTICO ESTRICTO POR DESCRIPCIÓN 
+        data.sort((a, b) => (a.descripcion || '').localeCompare(b.descripcion || ''));
+        setProducts(data);
+      }
     } catch(err) { console.error("Error", err) }
   };
 
   const fetchSummary = async () => {
     try {
       const res = await fetch(`/api/summary?month=${month}&year=${year}`);
-      const data = await res.json();
-      if (Array.isArray(data)) setSummary(data);
+      let data = await res.json();
+      if (Array.isArray(data)) {
+        // ORDEN ALFABÉTICO ESTRICTO EN EL CUADRE MENSUAL
+        data.sort((a, b) => (a.product?.descripcion || '').localeCompare(b.product?.descripcion || ''));
+        setSummary(data);
+      }
     } catch(err) { console.error("Error", err) }
   };
 
   const fetchRecentTransactions = async () => {
     try {
-      const res = await fetch(`/api/transactions`);
+      const res = await fetch(`/api/transactions?month=${auditoriaMonth}&year=${auditoriaYear}`);
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data)) setRecentTrans(data.reverse().slice(0, 50));
+        // Cuando hay mes y año específico mostramos TODOS los de ese mes, sin el limite absurdo de los ultimos 50 globales.
+        if (Array.isArray(data)) setRecentTrans(data);
       }
     } catch(err) { console.error("Error", err) }
   };
@@ -448,12 +466,46 @@ export default function App() {
                       <span className="absolute -top-3 left-4 bg-brand-bg px-2 text-brand-primary font-bold text-sm tracking-widest">PASO 1: BÚSQUEDA</span>
                       
                       <div className="space-y-4">
-                        <div>
-                          <label className="block text-sm text-brand-textMuted mb-1">Buscar Código</label>
-                          <select onChange={e=>handleProductSelect(e.target.value)} required className="w-full bg-brand-sidebar border border-brand-border rounded-lg p-3 text-white outline-none focus:border-brand-primary">
-                            <option value="">Desplegar o tipear...</option>
-                            {products.filter(p=>p.is_active).map(p=><option key={p.codigo} value={p.codigo}>{p.codigo} - {p.descripcion}</option>)}
-                          </select>
+                        <div className="relative">
+                          <label className="block text-sm text-brand-textMuted mb-1">Buscar Código o Nombre</label>
+                          <input 
+                            type="text" 
+                            placeholder="Tipea para buscar..."
+                            value={searchTerm}
+                            onClick={() => setShowDropdown(true)}
+                            onChange={(e) => {
+                              setSearchTerm(e.target.value);
+                              setShowDropdown(true);
+                              if (e.target.value === '') { setSelectedProductStat(null); }
+                            }}
+                            className="w-full bg-brand-sidebar border border-brand-border rounded-lg p-3 text-white outline-none focus:border-brand-primary"
+                          />
+                          {showDropdown && searchTerm.length > 0 && (
+                            <ul className="absolute z-50 w-full mt-1 max-h-48 overflow-y-auto bg-brand-panel border border-brand-primary rounded-lg shadow-xl shadow-black/50">
+                              {products.filter(p => 
+                                p.is_active && (
+                                  p.codigo.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                                  p.descripcion.toLowerCase().includes(searchTerm.toLowerCase())
+                                )
+                              ).map(p => (
+                                <li 
+                                  key={p.codigo} 
+                                  className="p-3 text-sm text-white hover:bg-brand-primary cursor-pointer border-b border-brand-border/30 last:border-0"
+                                  onClick={() => {
+                                    setSearchTerm(`${p.codigo} - ${p.descripcion}`);
+                                    handleProductSelect(p.codigo);
+                                    setShowDropdown(false);
+                                  }}
+                                >
+                                  <span className="font-bold text-brand-green mr-2">{p.codigo}</span>
+                                  {p.descripcion}
+                                </li>
+                              ))}
+                              {products.filter(p => p.is_active && (p.codigo.toLowerCase().includes(searchTerm.toLowerCase()) || p.descripcion.toLowerCase().includes(searchTerm.toLowerCase()))).length === 0 && (
+                                <li className="p-3 text-sm text-brand-textMuted text-center italic">No hay coincidencias</li>
+                              )}
+                            </ul>
+                          )}
                         </div>
                         <div>
                           <label className="block text-sm text-brand-textMuted mb-1">Descripción Auto-Rellenado</label>
@@ -496,14 +548,14 @@ export default function App() {
                           </div>
                           <div>
                             <label className="block text-sm text-brand-textMuted mb-1">Cantidad (U.)</label>
-                            <input type="number" name="quantity" min="1" max={subTabMov==='salidas'?selectedProductStat?.existencias||999:undefined} required className="w-full bg-brand-sidebar border border-brand-border text-white rounded-lg p-3 font-bold outline-none focus:border-brand-primary text-center text-lg" />
+                            <input type="number" name="quantity" min="1" defaultValue={1} max={subTabMov==='salidas'?selectedProductStat?.existencias||999:undefined} required className="w-full bg-brand-sidebar border border-brand-border text-white rounded-lg p-3 font-bold outline-none focus:border-brand-primary text-center text-lg" />
                           </div>
                         </div>
 
                         {subTabMov === 'entradas' && (
                           <div>
                             <label className="block text-sm text-brand-textMuted mb-1">Costo de Factura Entrante (Altera el Ponderado Real)</label>
-                            <input type="number" step="0.01" name="costo_unitario" required className="w-full bg-brand-sidebar border border-brand-border text-brand-green rounded-lg p-3 font-bold text-lg outline-none focus:border-brand-primary text-center" />
+                            <input type="number" step="0.01" name="costo_unitario" required defaultValue={selectedProductStat ? selectedProductStat.costoPromedio : ''} key={`costo-in-${selectedProductStat?.codigo}`} className="w-full bg-brand-sidebar border border-brand-border text-brand-green rounded-lg p-3 font-bold text-lg outline-none focus:border-brand-primary text-center" />
                           </div>
                         )}
                         <div>
@@ -522,7 +574,26 @@ export default function App() {
 
               {/* AUDITORIA */}
               <div className="bg-brand-panel rounded-xl p-6 border border-brand-border/30 mt-8">
-                <h3 className="text-white font-bold mb-4">Registro en Tiempo Real (Top 50 Transacciones)</h3>
+                <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                  <h3 className="text-white font-bold text-lg">Historial de Auditoría Global</h3>
+                  
+                  <div className="flex gap-4">
+                    <div className="flex flex-col gap-1 text-sm text-brand-textMuted">
+                      <span className="font-bold">Mes</span>
+                      <select className="bg-brand-sidebar border border-brand-border text-white text-sm rounded focus:ring-brand-primary outline-none px-2 py-1" value={auditoriaMonth} onChange={e => setAuditoriaMonth(e.target.value)}>
+                        {Array.from({length: 12}).map((_, i) => {
+                          const m = String(i + 1).padStart(2, '0');
+                          return <option key={m} value={m}>{m}</option>
+                        })}
+                      </select>
+                    </div>
+                    <div className="flex flex-col gap-1 text-sm text-brand-textMuted">
+                      <span className="font-bold">Año</span>
+                      <input type="number" className="bg-brand-sidebar w-20 border border-brand-border text-white text-sm rounded focus:ring-brand-primary outline-none px-2 py-1" value={auditoriaYear} onChange={e => setAuditoriaYear(e.target.value)} />
+                    </div>
+                  </div>
+                </div>
+
                 <div className="bg-brand-tableBg border border-brand-border rounded-lg overflow-hidden">
                   <table className="w-full text-left text-sm text-brand-textMuted">
                     <thead className="bg-[#161B2A] border-b border-brand-border text-xs uppercase font-bold sticky top-0">
