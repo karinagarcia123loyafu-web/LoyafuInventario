@@ -39,7 +39,7 @@ export async function GET(request: Request) {
         const monthTrans = transByMonth[monthKey];
         const entradasDelMes = monthTrans.filter((t: any) => t.type === 'entrada');
         
-        // Calcular promedio del mes según la ecuación (Costo Inicial + Suples) / (1 + Suples)
+        // Calcular promedio del mes según Opción 1: Exclusivo de Facturas
         if (entradasDelMes.length > 0) {
           let sumCostosNuevos = 0;
           for(const e of entradasDelMes) {
@@ -47,11 +47,8 @@ export async function GET(request: Request) {
              const costoU = e.costo_unitario ? Number(e.costo_unitario) : (Number(e.total_bolivares)/qty);
              sumCostosNuevos += costoU;
           }
-          if (costoPromedio === 0) {
-              costoPromedio = sumCostosNuevos / entradasDelMes.length;
-          } else {
-              costoPromedio = (costoPromedio + sumCostosNuevos) / (1 + entradasDelMes.length);
-          }
+          // El 'Costo Inicial' no importa, el promedio mensual se define sólo por las compras del mes
+          costoPromedio = sumCostosNuevos / entradasDelMes.length;
         }
         
         // Al final calcular stock sin acoplarlo al precio

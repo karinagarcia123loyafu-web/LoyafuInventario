@@ -384,7 +384,7 @@ export default function App() {
                     <div className="col-span-1 text-center font-bold">CÓDIGO</div>
                     <div className="col-span-1 text-center font-bold">DESCRIPCIÓN</div>
                     <div className="col-span-1 text-center font-bold leading-tight">INV.<br/>INICIAL<br/>(U) / BS</div>
-                    <div className="col-span-1 text-center font-bold leading-tight">COSTO<br/>MENSUAL<br/>(BS)</div>
+                    <div className="col-span-1 text-center font-bold leading-tight text-xs lg:text-sm">COSTO<br/>PROMEDIO<br/>MENSUAL</div>
                     <div className="col-span-1 text-center font-bold leading-tight">ENTRADAS<br/>(U) / TOTAL</div>
                     <div className="col-span-1 text-center font-bold leading-tight">SALIDAS<br/>(VENTAS)<br/>(U) / TOTAL</div>
                     <div className="col-span-1 text-center font-bold leading-tight">RET/CONSU<br/>(U)</div>

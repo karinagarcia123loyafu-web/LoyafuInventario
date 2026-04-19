@@ -54,11 +54,8 @@ export async function GET(request: Request) {
              const costoU = e.costo_unitario !== undefined && e.costo_unitario !== null ? Number(e.costo_unitario) : (Number(e.total_bolivares)/qty);
              sumCostosNuevos += costoU;
           }
-          if (costoPromedioConstante === 0) {
-              costoPromedioConstante = sumCostosNuevos / entradasDelMes.length;
-          } else {
-              costoPromedioConstante = (costoPromedioConstante + sumCostosNuevos) / (1 + entradasDelMes.length);
-          }
+          // El 'Costo Inicial' no importa, el promedio mensual se define sólo por las compras del mes
+          costoPromedioConstante = sumCostosNuevos / entradasDelMes.length;
         }
       }
 
