@@ -25,41 +25,20 @@ export async function GET(request: Request) {
       let stock = 0;
       let costoPromedio = 0;
 
-      // Agrupar transacciones por mes (Año-Mes)
-      const transByMonth: {[key: string]: any[]} = {};
       for (const t of txs || []) {
-        const m = t.date ? t.date.substring(0, 7) : '2000-01';
-        if (!transByMonth[m]) transByMonth[m] = [];
-        transByMonth[m].push(t);
-      }
-      
-      const sortedMonths = Object.keys(transByMonth).sort();
-      
-      for(const monthKey of sortedMonths) {
-        const monthTrans = transByMonth[monthKey];
-        const entradasDelMes = monthTrans.filter((t: any) => t.type === 'entrada');
-        
-        // Calcular promedio del mes según Opción 1: Exclusivo de Facturas
-        if (entradasDelMes.length > 0) {
-          let sumCostosNuevos = 0;
-          for(const e of entradasDelMes) {
-             const qty = Number(e.quantity);
-             const costoU = e.costo_unitario ? Number(e.costo_unitario) : (Number(e.total_bolivares)/qty);
-             sumCostosNuevos += costoU;
-          }
-          // El 'Costo Inicial' no importa, el promedio mensual se define sólo por las compras del mes
-          costoPromedio = sumCostosNuevos / entradasDelMes.length;
-        }
-        
-        // Al final calcular stock sin acoplarlo al precio
-        for (const t of monthTrans) {
-           const qty = Number(t.quantity);
-           if (t.type === 'entrada') {
-             stock += qty;
+        const qty = Number(t.quantity);
+        if (t.type === 'entrada') {
+           const costoU = t.costo_unitario !== undefined && t.costo_unitario !== null ? Number(t.costo_unitario) : (Number(t.total_bolivares)/qty);
+           // Fórmula Literal de Bodeguero: (Anterior + Nuevo) / 2
+           if (costoPromedio === 0) {
+              costoPromedio = costoU;
            } else {
-             stock -= qty;
-             if (stock < 0) stock = 0;
+              costoPromedio = (costoPromedio + costoU) / 2;
            }
+           stock += qty;
+        } else {
+           stock -= qty;
+           if (stock < 0) stock = 0;
         }
       }
       
