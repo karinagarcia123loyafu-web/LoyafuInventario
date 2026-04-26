@@ -35,14 +35,17 @@ export async function GET(request: Request) {
 
       for(const t of allPastTrans) {
         const qty = Number(t.quantity);
-        const totalBs = Number(t.total_bolivares);
         if (t.type === 'entrada') {
-          const ns = _stockAcum + qty;
-          if (ns > 0) costoPromedio = ((_stockAcum * costoPromedio) + totalBs) / ns;
-          _stockAcum = ns;
+           const costoU = t.costo_unitario !== undefined && t.costo_unitario !== null ? Number(t.costo_unitario) : (Number(t.total_bolivares)/qty);
+           if (costoPromedio === 0) {
+              costoPromedio = costoU;
+           } else {
+              costoPromedio = (costoPromedio + costoU) / 2;
+           }
+           _stockAcum += qty;
         } else {
-          _stockAcum -= qty;
-          if (_stockAcum < 0) _stockAcum = 0;
+           _stockAcum -= qty;
+           if (_stockAcum < 0) _stockAcum = 0;
         }
       }
 

@@ -600,6 +600,8 @@ export default function App() {
                       <tr>
                         <th className="px-4 py-3">Fecha</th>
                         <th className="px-4 py-3">Flujo</th>
+                        <th className="px-4 py-3">Producto</th>
+                        <th className="px-4 py-3">Factura</th>
                         <th className="px-4 py-3">Cant</th>
                         <th className="px-4 py-3">Costo BS.</th>
                         <th className="px-4 py-3">Total Asign. BS</th>
@@ -615,6 +617,11 @@ export default function App() {
                               {t.type.toUpperCase()}
                             </span>
                           </td>
+                          <td className="px-4 py-3 truncate max-w-[200px]" title={t.descripcion}>
+                            <div className="text-white font-bold text-xs">{t.codigo}</div>
+                            <div className="text-[10px] text-brand-textMuted">{t.descripcion}</div>
+                          </td>
+                          <td className="px-4 py-3 text-xs text-brand-textMuted">{t.factura || '-'}</td>
                           <td className="px-4 py-3 text-white font-bold">{t.quantity} U</td>
                           <td className="px-4 py-3">{formatBs(t.costo_unitario)}</td>
                           <td className="px-4 py-3 font-bold text-white max-w-[150px] truncate">{formatBs(t.total_bolivares)}</td>
